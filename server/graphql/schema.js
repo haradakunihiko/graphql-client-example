@@ -1,11 +1,15 @@
+var { setTimeout } = require('timers');
+var sleep = require('sleep');
+
 const { makeExecutableSchema } = require('graphql-tools');
 
 const typeDefs = `
   type Query {
     viewer: User
+    users: [User]
   }
   type User {
-    id: String
+    id: String!
     name: String
     feeds: [Feed]
   }
@@ -13,6 +17,7 @@ const typeDefs = `
     id: String
     title: String
     body: String
+    author: User
   }
   type Mutation {
     updateViewerName(name: String): User
@@ -21,23 +26,46 @@ const typeDefs = `
 
 function fetchUser(userId) {
   return {
-    id: '1',
-    name: 'harada'
+    id: userId,
+    name: `USER-${userId}`
   };
 }
 
-function fetchFeeds(userId) {
-  return [
-    {
-      id: '1',
-      title: 'advent calendar 1st day',
-      body: 'this is the first ...'
-    }, {
-      id: '2',
-      title: 'advent calendar 2nd day',
-      body: 'this is the second ....'
-    }
-  ]
+function fetchUsers() {
+  return [{
+    id: '1',
+    name: 'USER-1'
+  },{
+    id: '2',
+    name: 'USER-2'
+  },{
+    id: '3',
+    name: 'USER-3'
+  },{
+    id: '4',
+    name: 'USER-4'
+  }];
+}
+
+async function fetchFeedsByUser(userId) {
+  return new Promise(function(resolve, reject){
+    sleep.sleep(1);
+    resolve(
+      [
+        {
+          id: '1',
+          title: 'advent calendar 1st day',
+          body: 'this is the first ...',
+          authorId: 1
+        }, {
+          id: '2',
+          title: 'advent calendar 2nd day',
+          body: 'this is the second ....',
+          authorId: 2
+        }
+      ]
+    );
+  });
 }
 
 const resolvers = {
@@ -45,9 +73,15 @@ const resolvers = {
     viewer: (root, args, ctx) => {
       return fetchUser(ctx.userId);
     },
+    users: () => {
+      return fetchUsers();
+    }
   },
   User: {
-    feeds: (user) => fetchFeeds(user.id),
+    feeds: (user) => fetchFeedsByUser(user.id),
+  },
+  Feed: {
+    author: (feed) => fetchUser(feed.authorId)
   },
   Mutation: {
     updateViewerName(root, args) {
